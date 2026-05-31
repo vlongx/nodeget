@@ -48,7 +48,7 @@ ghcr.io/genshinminecraft/nodeget:<version>
 ## VPS 快速部署
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/eeviriyi/NodeGet-Docker-Compose/main/scripts/install.sh)
+https://github.com/vlongx/nodeget/main/scripts/install.sh)
 ```
 
 选择 `1. 安装 / 首次部署`，按提示输入：
