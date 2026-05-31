@@ -1,0 +1,22 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$DOMAIN} {
+	encode gzip
+
+	redir /board /board/
+
+	handle_path /board/* {
+		reverse_proxy nodeget-board:80
+	}
+
+	handle /ws* {
+		rewrite * /
+		reverse_proxy nodeget-server:{$NODEGET_PORT}
+	}
+
+	handle {
+		reverse_proxy nodeget-statusshow:80
+	}
+}
