@@ -1,0 +1,15 @@
+services:
+  nodeget-statusshow:
+    build:
+      context: ./statusshow
+      args:
+        STATUSSHOW_REPO: ${STATUSSHOW_REPO:-https://github.com/NodeSeekDev/NodeGet-StatusShow.git}
+        STATUSSHOW_REF: ${STATUSSHOW_REF:-main}
+
+  nodeget-board:
+    build:
+      context: ./board
+      args:
+        BOARD_REPO: ${BOARD_REPO:-https://github.com/NodeSeekDev/NodeGet-board.git}
+        BOARD_REF: ${BOARD_REF:-main}
+        BOARD_BASE: /board/

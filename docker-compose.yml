@@ -1,0 +1,75 @@
+name: nodeget-stack
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      nodeget-server:
+        condition: service_started
+      nodeget-statusshow:
+        condition: service_started
+      nodeget-board:
+        condition: service_started
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+      NODEGET_PORT: ${NODEGET_PORT:-2211}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nodeget}
+      POSTGRES_USER: ${POSTGRES_USER:-nodeget}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nodeget} -d ${POSTGRES_DB:-nodeget}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  nodeget-server:
+    # NODEGET_IMAGE 由 install.sh / update_stack 在每次安装或更新时动态解析并写入 .env，
+    # 优先使用 ghcr.io/genshinminecraft/nodeget 的最新版本 tag，
+    # 回退顺序：ghcr.io/genshinminecraft → ghcr.io/nodeseekdev → genshinmc/nodeget (Docker Hub)
+    # 不要在生产环境长期使用 latest，install.sh 会自动钉住具体版本号。
+    image: ${NODEGET_IMAGE:-ghcr.io/genshinminecraft/nodeget:latest}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODEGET_PORT: ${NODEGET_PORT:-2211}
+      NODEGET_LOG_FILTER: ${NODEGET_LOG_FILTER:-info}
+      NODEGET_SERVER_UUID: ${NODEGET_SERVER_UUID:-}
+      NODEGET_DATABASE_URL: postgres://${POSTGRES_USER:-nodeget}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-nodeget}
+    volumes:
+      - nodeget-config:/etc/nodeget
+      - nodeget-data:/var/lib/nodeget
+
+  nodeget-statusshow:
+    image: ${STATUSSHOW_IMAGE:-ghcr.io/eeviriyi/nodeget-statusshow:main}
+    restart: unless-stopped
+    volumes:
+      - ./statusshow/config.json:/usr/share/nginx/html/config.json:ro
+
+  nodeget-board:
+    image: ${BOARD_IMAGE:-ghcr.io/eeviriyi/nodeget-board:main}
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+  postgres-data:
+  nodeget-config:
+  nodeget-data:
