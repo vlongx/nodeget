@@ -1,0 +1,12 @@
+{
+  "site_name": "NodeGet Status",
+  "site_logo": "",
+  "footer": "Powered by NodeGet",
+  "site_tokens": [
+    {
+      "name": "main",
+      "backend_url": "wss://nodeget.example.com/ws",
+      "token": "replace-with-public-token"
+    }
+  ]
+}
