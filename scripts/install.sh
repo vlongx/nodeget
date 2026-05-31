@@ -64,100 +64,12 @@ base64_one_line() {
 }
 
 # ─────────────────────────────────────────────
-# NodeGet 镜像自动探测
-#
-# 探测顺序（优先级由高到低）：
-#   1. GHCR ghcr.io/genshinminecraft/nodeget  ← 当前 CI/CD 实际推送位置
-#   2. GHCR ghcr.io/nodeseekdev/nodeget       ← 备用（主仓库）
-#   3. Docker Hub genshinmc/nodeget           ← 旧地址，可能停留在旧版本
-#
-# 对每个源尝试通过 Registry API 解析形如 vX.Y.Z 或 X.Y.Z-<commit> 的版本 tag，
-# 取版本号最大的一条作为结果；若解析失败则跳过该源，最终回退到 latest。
+# NodeGet 镜像配置
+# 直接使用最稳定的 Github 官方 latest 镜像
 # ─────────────────────────────────────────────
 
-# 从 GHCR 获取最新版本 tag（不需要认证的公开镜像）
-# 用法: _ghcr_latest_tag <owner> <repo>  → 输出 tag 字符串，失败输出空
-_ghcr_latest_tag() {
-  owner="$1"
-  repo="$2"
-  if ! command -v curl >/dev/null 2>&1; then
-    return 0
-  fi
-  # GHCR 公开镜像需要匿名 token
-  token="$(curl -fsSL --max-time 10 \
-    "https://ghcr.io/token?scope=repository:${owner}/${repo}:pull" \
-    2>/dev/null | sed 's/.*"token":"\([^"]*\)".*/\1/')" || return 0
-  [ -z "$token" ] && return 0
-
-  tags_json="$(curl -fsSL --max-time 10 \
-    -H "Authorization: Bearer ${token}" \
-    "https://ghcr.io/v2/${owner}/${repo}/tags/list" \
-    2>/dev/null)" || return 0
-  [ -z "$tags_json" ] && return 0
-
-  # 匹配 vX.Y.Z 或 X.Y.Z-<hexcommit> 形式，取版本最大值
-  printf '%s' "$tags_json" \
-    | tr ',' '\n' \
-    | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9a-f]{6,})?' \
-    | sed 's/^v//' \
-    | sort -t. -k1,1n -k2,2n -k3,3n \
-    | tail -1
-}
-
-# 从 Docker Hub 获取最新版本 tag
-# 用法: _dockerhub_latest_tag <namespace> <repo>  → 输出 tag 字符串，失败输出空
-_dockerhub_latest_tag() {
-  ns="$1"
-  repo="$2"
-  if ! command -v curl >/dev/null 2>&1; then
-    return 0
-  fi
-  token="$(curl -fsSL --max-time 10 \
-    "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${ns}/${repo}:pull" \
-    2>/dev/null | sed 's/.*"token":"\([^"]*\)".*/\1/')" || return 0
-  [ -z "$token" ] && return 0
-
-  tags_json="$(curl -fsSL --max-time 10 \
-    -H "Authorization: Bearer ${token}" \
-    "https://registry-1.docker.io/v2/${ns}/${repo}/tags/list" \
-    2>/dev/null)" || return 0
-  [ -z "$tags_json" ] && return 0
-
-  printf '%s' "$tags_json" \
-    | tr ',' '\n' \
-    | grep -oE 'v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9a-f]{6,})?' \
-    | sed 's/^v//' \
-    | sort -t. -k1,1n -k2,2n -k3,3n \
-    | tail -1
-}
-
-# 主探测函数：返回完整镜像引用，如 ghcr.io/genshinminecraft/nodeget:v0.3.7
 fetch_latest_nodeget_image() {
-  echo "  → 尝试 GHCR ghcr.io/genshinminecraft/nodeget ..." >&2
-  tag="$(_ghcr_latest_tag genshinminecraft nodeget 2>/dev/null || true)"
-  if [ -n "$tag" ]; then
-    echo "  ✓ 找到版本：${tag}" >&2
-    printf '%s' "ghcr.io/genshinminecraft/nodeget:v${tag}"
-    return 0
-  fi
-
-  echo "  → 尝试 GHCR ghcr.io/nodeseekdev/nodeget ..." >&2
-  tag="$(_ghcr_latest_tag nodeseekdev nodeget 2>/dev/null || true)"
-  if [ -n "$tag" ]; then
-    echo "  ✓ 找到版本：${tag}" >&2
-    printf '%s' "ghcr.io/nodeseekdev/nodeget:v${tag}"
-    return 0
-  fi
-
-  echo "  → 尝试 Docker Hub genshinmc/nodeget ..." >&2
-  tag="$(_dockerhub_latest_tag genshinmc nodeget 2>/dev/null || true)"
-  if [ -n "$tag" ]; then
-    echo "  ✓ 找到版本：${tag}" >&2
-    printf '%s' "genshinmc/nodeget:${tag}"
-    return 0
-  fi
-
-  echo "  ✗ 所有源均未解析到具体版本 tag，回退到 ghcr.io/genshinminecraft/nodeget:latest" >&2
+  echo "  ✓ 指定使用版本：ghcr.io/genshinminecraft/nodeget:latest" >&2
   printf '%s' "ghcr.io/genshinminecraft/nodeget:latest"
 }
 
